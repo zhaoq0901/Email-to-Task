@@ -1,16 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "Gmail AI Calendar Task",
+  "name": "Gmail AI to Google Tasks",
   "version": "1.0",
-  "description": "Injects a Gmail button to summarize an email and pre-fill a Google Calendar event using Chrome AI.",
-  "permissions": ["activeTab"],
+  "permissions": [
+    "activeTab",
+    "identity"
+  ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "oauth2": {
+    "client_id": "5248405282-8b1fda702vifo3t483kbrm58ce7mb1ab.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/tasks"
+    ]
+  }
 }

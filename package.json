@@ -1,0 +1,10 @@
+﻿{
+  "name": "email-to-task",
+  "version": "1.0.0",
+  "description": "Generate Google Tasks items from selected Gmail text using Gemini Nano.",
+  "main": "background.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

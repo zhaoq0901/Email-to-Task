@@ -1,163 +1,138 @@
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const AI_MODEL = 'gpt-4o-mini';
+﻿/* global LanguageModel */
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type !== 'generateCalendarLink') {
-    return;
-  }
+const TASKS_API_BASE = 'https://www.googleapis.com/tasks/v1';
 
-  processEmailForCalendar(message.payload)
-    .then(url => {
-      chrome.tabs.create({ url });
-      sendResponse({ success: true });
-    })
-    .catch(error => {
-      console.error('Calendar link generation failed', error);
-      sendResponse({ error: error.message || 'Unknown error' });
-    });
-
-  return true;
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'emailToTask',
+    title: 'Create Email Task',
+    contexts: ['selection'],
+    documentUrlPatterns: ['https://mail.google.com/*']
+  });
 });
 
-async function processEmailForCalendar(email) {
-  const apiKey = await getOpenAIApiKey();
-  if (!apiKey) {
-    throw new Error('OpenAI API key is not configured. Open the extension options and add your key.');
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId !== 'emailToTask') return;
+
+  const selectedText = info.selectionText?.trim();
+  if (!selectedText) return;
+
+  try {
+    const taskData = await parseTaskDetails(selectedText, info.pageUrl);
+    await createGoogleTask(taskData);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'Email to Task',
+      message: 'Google Task created successfully.'
+    });
+  } catch (error) {
+    console.error('Email to Task failed:', error);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'Email to Task',
+      message: String(error)
+    });
   }
+});
 
-  const eventData = await extractEventData(email, apiKey);
-  const calendarUrl = buildGoogleCalendarUrl(eventData, email.url);
-  return calendarUrl;
-}
-
-function getOpenAIApiKey() {
-  return new Promise(resolve => {
-    chrome.storage.local.get(['openaiApiKey'], result => {
-      resolve(result.openaiApiKey || '');
+async function getAuthToken(interactive = true) {
+  return new Promise((resolve, reject) => {
+    chrome.identity.getAuthToken({ interactive }, (token) => {
+      const lastError = chrome.runtime.lastError;
+      if (lastError || !token) {
+        reject(lastError || new Error('Failed to obtain OAuth token.'));
+        return;
+      }
+      resolve(token);
     });
   });
 }
 
-async function extractEventData(email, apiKey) {
-  const prompt = `Extract calendar event details from the email text.
-Return ONLY a JSON object with these keys: title, start_time, end_time, location, summary.
-- title: short event title
-- start_time: ISO 8601 or YYYYMMDDTHHMMSS
-- end_time: ISO 8601 or YYYYMMDDTHHMMSS
-- location: event location or empty string
-- summary: short AI summary of the email body
-If the email has no explicit end time, choose a reasonable default end time 1 hour after the start time.
-Use the email body below as the source.
+async function createGoogleTask(task) {
+  const token = await getAuthToken(true);
+  const body = {
+    title: task.task_title,
+    notes: task.description,
+    due: normalizeDeadline(task.deadline)
+  };
 
-Email Subject: ${email.subject}
-Email Link: ${email.url}
-Email Body:
-${email.body}`;
-
-  const response = await fetch(OPENAI_API_URL, {
+  const response = await fetch(`${TASKS_API_BASE}/lists/@default/tasks`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        { role: 'system', content: 'You are an assistant that extracts calendar event details from email text. Output valid JSON only.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 350
-    })
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} ${errText}`);
+    if (response.status === 401) {
+      chrome.identity.removeCachedAuthToken({ token }, () => {});
+    }
+    const errorText = await response.text();
+    throw new Error(`Tasks API error: ${response.status} ${errorText}`);
   }
 
-  const data = await response.json();
-  const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!text) {
-    throw new Error('No response text returned from AI.');
+  return response.json();
+}
+
+function normalizeDeadline(deadline) {
+  const parsed = new Date(deadline);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
   }
 
-  const parsed = parseJsonText(text);
-  validateEventData(parsed);
-  return parsed;
+  const dateOnlyMatch = /^\d{4}-\d{2}-\d{2}$/.exec(deadline);
+  if (dateOnlyMatch) {
+    return `${deadline}T00:00:00.000Z`;
+  }
+
+  return new Date().toISOString();
+}
+
+async function parseTaskDetails(text, pageUrl) {
+  const session = await LanguageModel.create({
+    temperature: 0,
+    topK: 1.0
+  });
+
+  const prompt = `The following selected Gmail text is from an email. Extract the task details and return only valid JSON with the keys: task_title, deadline, description.` +
+    `\n\n- task_title: a one-sentence task title` +
+    `\n- deadline: a due date or date-time in ISO 8601 format` +
+    `\n- description: the important details of the email and include the original email link at the end.` +
+    `\n\nIf no explicit deadline is present, choose a reasonable deadline within the next business day.` +
+    `\n\nEmail URL: ${pageUrl || 'unknown'}` +
+    `\nSelected text:\n${text}`;
+
+  const raw = await session.prompt(prompt);
+  const task = parseJsonText(raw);
+  validateTaskData(task);
+  if (!task.description.includes(pageUrl || 'unknown')) {
+    task.description = `${task.description}\nOriginal Email: ${pageUrl || 'unknown'}`.trim();
+  }
+  return task;
 }
 
 function parseJsonText(text) {
   try {
     return JSON.parse(text);
-  } catch (_) {
+  } catch (error) {
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
-    if (start === -1 || end === -1) {
-      throw new Error('AI response is not valid JSON.');
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(text.slice(start, end + 1));
     }
-    const jsonText = text.slice(start, end + 1);
-    return JSON.parse(jsonText);
+    throw new Error(`Unable to parse AI output as JSON: ${error.message}`);
   }
 }
 
-function validateEventData(eventData) {
-  if (!eventData || typeof eventData !== 'object') {
-    throw new Error('AI response did not return an object.');
+function validateTaskData(task) {
+  if (!task || typeof task !== 'object') {
+    throw new Error('AI response did not return a JSON object.');
   }
-  if (!eventData.title || !eventData.start_time) {
-    throw new Error('AI response is missing required title or start_time.');
+  if (!task.task_title || !task.deadline || !task.description) {
+    throw new Error('AI response is missing required task_title, deadline, or description.');
   }
-  if (!eventData.end_time) {
-    eventData.end_time = eventData.start_time;
-  }
-}
-
-function buildGoogleCalendarUrl(eventData, emailUrl) {
-  const title = encodeURIComponent(eventData.title);
-  const location = eventData.location ? encodeURIComponent(eventData.location) : '';
-  const summaryText = [`Original Email: ${emailUrl}`, '', eventData.summary || ''].join('\n');
-  const details = encodeURIComponent(summaryText);
-  const dates = formatGoogleCalendarDates(eventData.start_time, eventData.end_time);
-
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: title,
-    dates,
-    location,
-    details
-  });
-
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
-
-function formatGoogleCalendarDates(startValue, endValue) {
-  const start = parseDateValue(startValue);
-  const end = parseDateValue(endValue || startValue);
-  return `${start}/${end}`;
-}
-
-function parseDateValue(value) {
-  const normalized = value.trim();
-  if (/^\d{8}T\d{6}$/.test(normalized)) {
-    return normalized;
-  }
-
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Unable to parse date/time from AI value: ${value}`);
-  }
-
-  return formatAsCalendarDate(parsed);
-}
-
-function formatAsCalendarDate(date) {
-  const pad = num => String(num).padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 }

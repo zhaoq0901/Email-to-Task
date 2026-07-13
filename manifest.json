@@ -1,25 +1,28 @@
-{
+﻿{
   "manifest_version": 3,
-  "name": "Gmail to Google Calendar Task",
-  "description": "Add a button in Gmail to summarize an email with AI and pre-fill a Google Calendar event.",
+  "name": "Email to Task",
   "version": "1.0.0",
-  "permissions": ["storage", "tabs"],
+  "description": "Generate Google Tasks items from selected Gmail text using Gemini Nano and the Google Tasks API.",
+  "permissions": ["contextMenus", "identity", "notifications"],
   "host_permissions": [
     "https://mail.google.com/*",
-    "https://api.openai.com/*"
+    "https://www.googleapis.com/*"
   ],
-  "background": {
-    "service_worker": "background.js"
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/tasks"
+    ]
   },
-  "content_scripts": [
-    {
-      "matches": ["https://mail.google.com/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ],
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
+  "minimum_chrome_version": "138",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }

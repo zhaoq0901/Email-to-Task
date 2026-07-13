@@ -12,7 +12,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       - If the email only contains a deadline or sign-up requirement, use the deadline date and set dueDate to the same day at 23:59:59 local time.
       - Include important action items, links, and special instructions in the description.
       - The description should be a concise task-ready note with key details and any deadlines extracted from the email.
-      - In the description text block, use a line break (\\n) before every sentence so it does not stick to the previous text.
+      - In the description text block, use a line break (\n) before every sentence so it does not stick to the previous text.
       - Use the email URL in the description for reference.
       - Keep the title concise and action-oriented.`
     
@@ -83,7 +83,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
             console.log("Task saved directly to Google Tasks!");
             
             // 4. Notify content script to display a sleek confirmation notification to the user
-            chrome.tabs.sendMessage(sender.tab.id, { action: "showSuccessToast", taskTitle: eventData.title });
+            chrome.tabs.sendMessage(sender.tab.id, {
+              action: "showSuccessToast",
+              taskTitle: eventData.title,
+              dueDate: eventData.dueDate // Pass the due date for potential calendar integration
+            });
           } else {
             const errData = await response.json();
             console.error("API error returned:", errData);

@@ -19,5 +19,5 @@ This Chrome extension injects a button into Gmail to summarize the current email
 
 ## Notes
 
-- This extension assumes Chrome supports the `chrome.LanguageModel` API and has a local AI model available.
+- This extension assumes Chrome supports the `LanguageModel` API and has a local AI model available.
 - If the model is unavailable, the extension will show an error.

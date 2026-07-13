@@ -8,9 +8,11 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
         You are an AI assistant that extracts task details from email content.
         Respond ONLY with a raw JSON object matching the schema.
       - If the email includes a specific appointment or event time, use that exact window.
+      - If no year is provided, use the current year ${new Date().getFullYear()}.
       - If the email only contains a deadline or sign-up requirement, use the deadline date and set dueDate to the same day at 23:59:59 local time.
       - Include important action items, links, and special instructions in the description.
       - The description should be a concise task-ready note with key details and any deadlines extracted from the email.
+      - In the description text block, use a line break (\\n) before every sentence so it does not stick to the previous text.
       - Use the email URL in the description for reference.
       - Keep the title concise and action-oriented.`
     
@@ -62,7 +64,8 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
           // 2. Format the Task Payload according to Google's API Specifications
           const taskPayload = {
             title: eventData.title,
-            notes: `Original Email: ${message.emailUrl}\n\nAI Summary:\n${eventData.summary}`,
+            notes: `Original Email: ${message.emailUrl}\n\n
+            AI Summary:\n${eventData.summary}`,
             due: `${eventData.dueDate}T00:00:00.000Z` // Google Tasks accepts RFC 3339 timestamp strings
           };
 
@@ -94,8 +97,9 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       console.error("Error processing request:", error);
     } finally {
       // FIX: Explicitly call sendResponse() to close the message channel gracefully.
+      // FIXED: Send success: true so content.js knows processing worked smoothly
       // This stops Chrome from showing the channel dropped warning.
-      sendResponse({ status: "processing_complete" });
+      sendResponse({ success: true, status: "processing_complete" });
     }
 }});
 

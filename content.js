@@ -1,6 +1,51 @@
 const BUTTON_ID = 'gmail-ai-calendar-task-btn';
 console.log('Gmail AI Calendar Task content script loaded');
 
+// ============================================================================
+// ADDED: Listen for successful completion events sent from background.js
+// ============================================================================
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "showSuccessToast") {
+    displaySleekToast(message.taskTitle);
+    sendResponse({ received: true });
+  }
+});
+
+function displaySleekToast(taskTitle) {
+  // Check if a toast container already exists to prevent duplicate windows
+  let toast = document.querySelector('#gmail-ai-success-toast');
+  if (toast) toast.remove();
+
+  toast = document.createElement('div');
+  toast.id = 'gmail-ai-success-toast';
+  toast.textContent = `✓ Task Created: "${taskTitle}"`;
+  
+  // Custom design style layout targeting the standard Gmail UI interface theme
+  toast.style.cssText = [
+    'position: fixed',
+    'bottom: 32px',
+    'left: 32px',
+    'background: #323232',
+    'color: #ffffff',
+    'padding: 12px 24px',
+    'border-radius: 4px',
+    'font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif',
+    'font-size: 14px',
+    'box-shadow: 0 3px 5px -1px rgba(0,0,0,.2), 0 6px 10px 0 rgba(0,0,0,.14)',
+    'z-index: 2147483647',
+    'transition: opacity 0.3s ease',
+    'pointer-events: none'
+  ].join(';');
+
+  document.body.appendChild(toast);
+
+  // Automatically remove toast element view after 4 seconds
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 function createButton() {
   const button = document.createElement('button');
   button.id = BUTTON_ID;

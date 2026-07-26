@@ -27,6 +27,13 @@ The extracted details are used to creat a new task on Google Calendar.
 5. Open a specific gmail that describes a task.
 6. Click on "Create Task on Calendar."
 
+## How it works
+
+1. Gemini Nano: Extract Data & Prompt Local AI
+2. `chrome.identity.getAuthToken()`:authenticates the user with Google
+3. [Execute Google Tasks API Write](https://developers.google.com/workspace/tasks/reference/rest)
+
 ## Acknowledgement
 
-This project follows Gemini Nano tutorial by GoogleChrome: https://github.com/GoogleChrome/chrome-extensions-samples/tree/main/functional-samples/ai.gemini-on-device-calendar-mate
+This project follows Gemini Nano tutorial by GoogleChrome:
+https://github.com/GoogleChrome/chrome-extensions-samples/tree/main/functional-samples/ai.gemini-on-device-calendar-mate

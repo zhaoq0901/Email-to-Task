@@ -1,9 +1,7 @@
 const BUTTON_ID = 'gmail-ai-calendar-task-btn';
 console.log('Gmail AI Calendar Task content script loaded');
 
-// ============================================================================
 // MESSAGE LISTENER & NOTIFICATION HANDLING
-// ============================================================================
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "showSuccessToast") {
     // 1. Alert the user with an obvious modal notification
@@ -25,14 +23,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// ============================================================================
 // ACTION BUTTON INITIALIZATION
-// ============================================================================
 function createButton() {
   const button = document.createElement('button');
   button.id = BUTTON_ID;
   button.type = 'button';
-  button.textContent = 'Create Task on Calendar';
+  button.textContent = 'Create a Task on Google Tasks';
   button.title = 'Click to summarize this email and save it to Google Tasks';
   
   button.style.cssText = [
@@ -73,7 +69,7 @@ function createButton() {
       action: 'parseEmail',
       emailSubject: getEmailSubject(),
       emailFrom: getEmailFrom(),
-      emailBody: emailBody,
+      emailBody: getEmailBody(),
       emailUrl: window.location.href,
     }, (response) => {
       button.disabled = false;
@@ -84,7 +80,7 @@ function createButton() {
         return;
       }
       if (!response || !response.success) {
-        alert('Unable to create calendar task. ' + (response?.error || 'Please try again.'));
+        alert('Unable to create google task. ' + (response?.error || 'Please try again.'));
       }
     });
   });
@@ -92,9 +88,7 @@ function createButton() {
   return button;
 }
 
-// ============================================================================
 // DOM INJECTION & INBOX OBSERVATION MANAGEMENT
-// ============================================================================
 function findToolbar() {
   const selectors = ['div[gh="mtb"]', 'div[role="toolbar"][aria-label*="Toolbar"]', 'div[role="toolbar"]'];
   for (const selector of selectors) {
@@ -105,6 +99,7 @@ function findToolbar() {
 }
 
 function insertFloatingButton() {
+
   if (document.querySelector(`#${BUTTON_ID}`) || document.querySelector(`#${BUTTON_ID}-wrapper`)) return;
 
   const wrapper = document.createElement('div');
@@ -113,6 +108,7 @@ function insertFloatingButton() {
   
   wrapper.appendChild(createButton());
   document.body.appendChild(wrapper);
+
 }
 
 function removeFallbackButton() {
@@ -132,9 +128,7 @@ function insertButton() {
   insertFloatingButton();
 }
 
-// ============================================================================
 // GMAIL DOM SCRAPING EXTRACTORS
-// ============================================================================
 function getEmailSubject() {
   const el = document.querySelector('h2.hP') || document.querySelector('.hP') || document.querySelector('h2');
   return el ? el.innerText.trim() : '';
@@ -154,9 +148,7 @@ function getEmailBody() {
   return clone.innerText.trim();
 }
 
-// ============================================================================
 // NAVIGATION & LIFECYCLE LISTENERS
-// ============================================================================
 function watchForLocationChange() {
   const pushState = history.pushState;
   const replaceState = history.replaceState;

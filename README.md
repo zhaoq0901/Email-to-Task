@@ -16,9 +16,9 @@ The extracted details are used to creat a new task on Google Calendar.
 
 ## User permissions
 
-- "https://mail.google.com/*" - access to Gmail pages 
+- "https://mail.google.com/*" - access to Gmail pages
 
-## Running this extension (locally)
+## Running this extension locally
 
 1. Clone and download this repository.
 2. Go to the Extensions page by entering `chrome://extensions` in a new tab. 
@@ -29,9 +29,15 @@ The extracted details are used to creat a new task on Google Calendar.
 
 ## How it works
 
-1. Gemini Nano: Extract Data & Prompt Local AI
-2. `chrome.identity.getAuthToken()`:authenticates the user with Google
-3. [Execute Google Tasks API Write](https://developers.google.com/workspace/tasks/reference/rest)
+- Gemini Nano: Extract Data & Prompt Local AI
+- `chrome.identity.getAuthToken()`:authenticates the user with Google
+- [Execute Google Tasks API Write](https://developers.google.com/workspace/tasks/reference/rest)
+
+## Future Work
+
+1. If AI unavailable or fails → Fallback parser runs
+2. Fallback extracts dates, titles, summaries using regex patterns
+3. Returns valid task data in same format as AI
 
 ## Acknowledgement
 

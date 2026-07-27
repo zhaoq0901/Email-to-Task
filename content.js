@@ -106,10 +106,6 @@ function removeExistingButton() {
 }
 
 function insertFloatingButton() {
-  if (!getEmailBody()) {
-    removeExistingButton();
-    return;
-  }
 
   if (document.querySelector(`#${BUTTON_ID}`) || document.querySelector(`#${BUTTON_ID}-wrapper`)) return;
 
@@ -119,6 +115,7 @@ function insertFloatingButton() {
   
   wrapper.appendChild(createButton());
   document.body.appendChild(wrapper);
+
 }
 
 function removeFallbackButton() {

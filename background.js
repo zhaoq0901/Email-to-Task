@@ -57,7 +57,7 @@ async function parseEmailWithAI(emailBody) {
       - If no year is provided, use the current year ${new Date().getFullYear()}.
       - If no date is found, set dueDate to tomorrow's date (${getDefaultDueDate()}).
       - If the email only contains a deadline, use the deadline date and set dueDate accordingly.
-      - Include important action items, links, and special instructions in the summary.
+      - Include important action items, links, and special instructions in the summary. The summary should be in bullet points and be concise and relevant.
       - Keep the title concise and action-oriented.
       - Return ONLY the JSON object, no additional text.`;
 

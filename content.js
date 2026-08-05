@@ -98,7 +98,18 @@ function findToolbar() {
   return null;
 }
 
+function removeExistingButton() {
+  const wrapper = document.querySelector(`#${BUTTON_ID}-wrapper`);
+  if (wrapper) wrapper.remove();
+  const toolbarButton = document.querySelector(`#${BUTTON_ID}`);
+  if (toolbarButton) toolbarButton.remove();
+}
+
 function insertFloatingButton() {
+  if (!getEmailBody()) {
+    removeExistingButton();
+    return;
+  }
 
   if (document.querySelector(`#${BUTTON_ID}`) || document.querySelector(`#${BUTTON_ID}-wrapper`)) return;
 
@@ -108,15 +119,18 @@ function insertFloatingButton() {
   
   wrapper.appendChild(createButton());
   document.body.appendChild(wrapper);
-
 }
 
 function removeFallbackButton() {
-  const wrapper = document.querySelector(`#${BUTTON_ID}-wrapper`);
-  if (wrapper) wrapper.remove();
+  removeExistingButton();
 }
 
 function insertButton() {
+  if (!getEmailBody()) {
+    removeExistingButton();
+    return;
+  }
+
   const toolbar = findToolbar();
   if (toolbar) {
     removeFallbackButton();

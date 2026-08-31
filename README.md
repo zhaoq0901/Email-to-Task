@@ -4,6 +4,8 @@ Use Chrome's built-in Prompt API (Gemini Nano) in an extension to extract and cr
 
 ## Overview
 
+![Alt Text](example.gif)
+
 Email To Task extension for allows users to quickly create task from a specific gmail by click on "Create Task on Calendar" buttom. The extension uses Gemini Nano to extract:
 
 - Task title

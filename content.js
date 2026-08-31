@@ -89,43 +89,41 @@ function createButton() {
 }
 
 // DOM INJECTION & INBOX OBSERVATION MANAGEMENT
-function findToolbar() {
-  const selectors = ['div[gh="mtb"]', 'div[role="toolbar"][aria-label*="Toolbar"]', 'div[role="toolbar"]'];
-  for (const selector of selectors) {
-    const toolbar = document.querySelector(selector);
-    if (toolbar) return toolbar;
+function findPrintAllButton() {
+  const candidates = document.querySelectorAll('button, [role="button"], div[role="button"]');
+
+  for (const el of candidates) {
+    const text = (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (text === 'print all' || text.includes('print all')) {
+      return el;
+    }
   }
+
   return null;
 }
 
-function insertFloatingButton() {
-
-  if (document.querySelector(`#${BUTTON_ID}`) || document.querySelector(`#${BUTTON_ID}-wrapper`)) return;
-
-  const wrapper = document.createElement('div');
-  wrapper.id = `${BUTTON_ID}-wrapper`;
-  wrapper.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 2147483647; display: flex;';
-  
-  wrapper.appendChild(createButton());
-  document.body.appendChild(wrapper);
-
-}
-
-function removeFallbackButton() {
-  const wrapper = document.querySelector(`#${BUTTON_ID}-wrapper`);
-  if (wrapper) wrapper.remove();
-}
-
 function insertButton() {
-  const toolbar = findToolbar();
-  if (toolbar) {
-    removeFallbackButton();
-    if (!toolbar.querySelector(`#${BUTTON_ID}`)) {
-      toolbar.appendChild(createButton());
-    }
+  const printAllButton = findPrintAllButton();
+  if (!printAllButton) {
+    const existingButton = document.querySelector(`#${BUTTON_ID}`);
+    if (existingButton) existingButton.remove();
     return;
   }
-  insertFloatingButton();
+
+  const row = printAllButton.closest('[role="toolbar"], [gh="mtb"], [aria-label*="toolbar"], .gH') || printAllButton.parentElement;
+  if (!row) return;
+
+  let button = row.querySelector(`#${BUTTON_ID}`);
+  if (!button) {
+    button = createButton();
+  }
+
+  button.style.marginLeft = '8px';
+  if (button.parentElement !== row) {
+    row.insertBefore(button, printAllButton);
+  } else if (button !== printAllButton && button.nextElementSibling !== printAllButton) {
+    row.insertBefore(button, printAllButton);
+  }
 }
 
 // GMAIL DOM SCRAPING EXTRACTORS
@@ -170,5 +168,16 @@ watchForLocationChange();
 window.addEventListener('locationchange', insertButton);
 insertButton();
 
-const observer = new MutationObserver(() => insertButton());
+let insertScheduled = false;
+
+const observer = new MutationObserver(() => {
+  if (insertScheduled) return;
+
+  insertScheduled = true;
+  requestAnimationFrame(() => {
+    insertScheduled = false;
+    insertButton();
+  });
+});
+
 observer.observe(document.body, { childList: true, subtree: true });

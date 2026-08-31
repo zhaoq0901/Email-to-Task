@@ -166,7 +166,6 @@ function watchForLocationChange() {
 
 watchForLocationChange();
 window.addEventListener('locationchange', insertButton);
-insertButton();
 
 let insertScheduled = false;
 
